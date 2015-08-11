@@ -44,34 +44,34 @@
       }
     ],
     "carbonNameSpacePrefix": "cloudwatch",
-    "elasticCacheMetrics": {
-      "Bytes": [
-        "UnusedMemory", 
-        "FreeableMemory", 
-        "NetworkBytesIn", 
-        "NetworkBytesOut"
+  },
+  "elasticCacheMetrics": {
+    "Bytes": [
+      "UnusedMemory", 
+      "FreeableMemory", 
+      "NetworkBytesIn", 
+      "NetworkBytesOut"
       ],
-      "Count": [
-        "CurrConnections", 
-        "CurrItems", 
-        "Evictions", 
-        "Reclaimed", 
-        "GetHits", 
-        "CacheHits",
-        "GetMisses", 
-        "CacheMisses", 
-        "GetTypeCmds", 
-        "SetTypeCmds", 
-        "CmdGet", 
-        "CmdSet", 
-        "DeleteHits", 
-        "DeleteMisses", 
-        "NewItems", 
-        "NewConnections" 
+    "Count": [
+      "CurrConnections", 
+      "CurrItems", 
+      "Evictions", 
+      "Reclaimed", 
+      "GetHits", 
+      "CacheHits",
+      "GetMisses", 
+      "CacheMisses", 
+      "GetTypeCmds", 
+      "SetTypeCmds", 
+      "CmdGet", 
+      "CmdSet", 
+      "DeleteHits", 
+      "DeleteMisses", 
+      "NewItems", 
+      "NewConnections" 
       ],
-      "Seconds": [
+    "Seconds": [
       ]
-    }
-  }
+  } 
 }
 
