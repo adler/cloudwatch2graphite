@@ -18,7 +18,8 @@ var graphitePrefix = config.metricsConfig.carbonNameSpacePrefix || 'cloudwatch';
 var useLegacyFormat = config.metricsConfig.legacyFormat;
 
 var elasticCacheMetrics = config.elasticCacheMetrics
-
+var RDSMetrics = config.RDSMetrics
+var ELBMetrics = config.ELBMetrics
 // pulling all of lodash for _.sortBy(), does it matter? Do we even need to sort?
 var _ = require('lodash');
 
@@ -45,164 +46,164 @@ var start_time = dateFormat(then, "isoUtcDateTime");
 
 var metrics = config.metricsConfig.metrics;
 
-getAllELBNames(getELBMetrics);
-getAllRDSInstanceNames(getRDSMetrics);
-
-getAllElasticCacheNames(function(nodes) { 
-  getElasticCacheMetrics(nodes, elasticCacheMetrics);
+getAllELBNames(function(elbs) {
+  getELBMetrics(elbs, ELBMetrics);
+});
+getAllElasticCacheNames(function(nodes) {
+  getElasticCacheMetrics(nodes, RDSMetrics);
+});
+getAllRDSInstanceNames(function(instances) {
+  getRDSMetrics(instances, RDSMetrics);
 });
 
 for (var index in metrics) {
-    printMetric(metrics[index], start_time, end_time);
+  printMetric(metrics[index], start_time, end_time);
 }
 
 function printMetric(metric, get_start_time, get_end_time) {
 
-    var getMetricStatistics_param = metric;
+  var getMetricStatistics_param = metric;
 
-    getMetricStatistics_param.StartTime = get_start_time;
-    getMetricStatistics_param.EndTime = get_end_time;
+  getMetricStatistics_param.StartTime = get_start_time;
+  getMetricStatistics_param.EndTime = get_end_time;
 
-    cloudwatch.getMetricStatistics(getMetricStatistics_param, function (err, data) {
-        if (err) {
-            console.error(err, err.stack); // an error occurred
-            console.error("on:\n" + JSON.stringify(getMetricStatistics_param, null, 2));
-        }
-        else {
-            formatter = useLegacyFormat ? legacyFormat : newFormat;
-            console.log( formatter(metric, data).join("\n"));
-        }
-    });
+  cloudwatch.getMetricStatistics(getMetricStatistics_param, function (err, data) {
+    if (err) {
+      console.error(err, err.stack); // an error occurred
+      console.error("on:\n" + JSON.stringify(getMetricStatistics_param, null, 2));
+    }
+    else {
+      formatter = useLegacyFormat ? legacyFormat : newFormat;
+      console.log( formatter(metric, data).join("\n"));
+    }
+  });
 }
 
 // Takes the orig query and the response and formats the response as an array of strings
 function newFormat(query, data) {
-    var dimension_prefix = _.map(query.Dimensions, function(dim) {
-        return dim.Name + '_' + dim.Value;
-    }).join('.');
+  var dimension_prefix = _.map(query.Dimensions, function(dim) {
+    return dim.Name + '_' + dim.Value;
+  }).join('.');
 
-    return _.map(data.Datapoints, function(point) {
-        var name = query.Namespace.replace("/", ".");
-        name += '.' + dimension_prefix;
-        name += '.' + query.MetricName;
-        var value = point[query['Statistics']];
-        var time = parseInt(new Date(point.Timestamp).getTime() / 1000.0);
-        return name + ' ' + value + ' ' + time;
-    });
+  return _.map(data.Datapoints, function(point) {
+    var name = query.Namespace.replace("/", ".");
+    name += '.' + dimension_prefix;
+    name += '.' + query.MetricName;
+    var value = point[query['Statistics']];
+    var time = parseInt(new Date(point.Timestamp).getTime() / 1000.0);
+    return name + ' ' + value + ' ' + time;
+  });
 }
 
 // Takes the orig query and the response and formats the response as an array of strings
 // according to old style of cloudwatch2graphite.
 function legacyFormat(query, data) {
 
-    // the legacy format is to only use the dimension Values in the prefix
-    var dimension_prefix = _.map(query.Dimensions, function(dim) {
-        return dim.Value;
-    }).join('.');
+  // the legacy format is to only use the dimension Values in the prefix
+  var dimension_prefix = _.map(query.Dimensions, function(dim) {
+    return dim.Value;
+  }).join('.');
 
-    return _.map(data.Datapoints, function(point) {
-        var name = query.Namespace.replace("/", ".");
-        name += '.' + dimension_prefix;
-        name += '.' + query.MetricName;
-        name += '.' + query['Statistics'];
-        name += '.' + query['Unit'];
-        var value = point[query['Statistics']];
-        var time = parseInt(new Date(point.Timestamp).getTime() / 1000.0);
-        return graphitePrefix + '.' + name.toLowerCase() + ' ' + value + ' ' + time;
-    });
+  return _.map(data.Datapoints, function(point) {
+    var name = query.Namespace.replace("/", ".");
+    name += '.' + dimension_prefix;
+    name += '.' + query.MetricName;
+    name += '.' + query['Statistics'];
+    name += '.' + query['Unit'];
+    var value = point[query['Statistics']];
+    var time = parseInt(new Date(point.Timestamp).getTime() / 1000.0);
+    return graphitePrefix + '.' + name.toLowerCase() + ' ' + value + ' ' + time;
+  });
 }
 
 // returns a hash with all details needed for an cloudwatch metrics query
 function buildMetricQuery(namespace, name, unit, statistics, dimensions, period) {
-    return {
-        'Namespace': namespace,
-        'MetricName': name,
-        'Unit' : unit,
-        'Statistics': [statistics],
-        'Dimensions' : dimensions,
-        'Period' : period || 60,
-    }
+  return {
+    'Namespace': namespace,
+    'MetricName': name,
+    'Unit' : unit,
+    'Statistics': [statistics],
+    'Dimensions' : dimensions,
+    'Period' : period || 60,
+  }
 }
 
 // executes callback with array of names of all ELBs
 function getAllELBNames(callback) {
-    var elb = new AWS.ELB(config.awsCredentials);
-    elb.describeLoadBalancers({}, function(err, data) {
-        if (err) {
-            console.log(err);
-            callback([]);
-        }
-        callback(_.pluck(data.LoadBalancerDescriptions, 'LoadBalancerName'));
-    });
+  var elb = new AWS.ELB(config.awsCredentials);
+  elb.describeLoadBalancers({}, function(err, data) {
+    if (err) {
+      console.log(err);
+      callback([]);
+    }
+    var elbs = _.pluck(data.LoadBalancerDescriptions, 'LoadBalancerName');
+    callback(elbs);
+  });
 }
 
 // takes array of ELB names and gets a variety metrics
 function getELBMetrics(elbs) {
-    for (index in elbs) {
-        var elb = elbs[index];
-        var dimensions = [ { "Name" : 'LoadBalancerName', "Value" : elb} ];
-        printMetric(buildMetricQuery('AWS/ELB', 'Latency', 'Seconds', 'Average', dimensions), start_time, end_time);
-        printMetric(buildMetricQuery('AWS/ELB', 'HealthyHostCount', 'Count', 'Average', dimensions), start_time, end_time);
-        printMetric(buildMetricQuery('AWS/ELB', 'UnHealthyHostCount', 'Count', 'Average', dimensions), start_time, end_time);
-        printMetric(buildMetricQuery('AWS/ELB', 'HTTPCode_Backend_2XX', 'Count', 'Sum', dimensions), start_time, end_time);
-        printMetric(buildMetricQuery('AWS/ELB', 'HTTPCode_Backend_3XX', 'Count', 'Sum', dimensions), start_time, end_time);
-        printMetric(buildMetricQuery('AWS/ELB', 'HTTPCode_Backend_4XX', 'Count', 'Sum', dimensions), start_time, end_time);
-        printMetric(buildMetricQuery('AWS/ELB', 'HTTPCode_Backend_5XX', 'Count', 'Sum', dimensions), start_time, end_time);
-        printMetric(buildMetricQuery('AWS/ELB', 'HTTPCode_ELB_4XX', 'Count', 'Sum', dimensions), start_time, end_time);
-        printMetric(buildMetricQuery('AWS/ELB', 'HTTPCode_ELB_5XX', 'Count', 'Sum', dimensions), start_time, end_time);
-    }
+  for (index in elbs) {
+    var elb = elbs[index];
+    var dimensions = [ { "Name" : 'LoadBalancerName', "Value" : elb} ];
+    Object.keys(ELBMetrics).forEach(function(unit) {
+      ELBMetrics[unit].forEach(function(metric) {
+        printMetric(buildMetricQuery('AWS/ELB', metric[0], unit, metric[1], dimensions), start_time, end_time);
+      });
+    })
+  }
 }
 
 // executes callback with array of names of all RDS db instances
 function getAllRDSInstanceNames(callback) {
-    var rds = new AWS.RDS(config.awsCredentials);
-    rds.describeDBInstances({}, function(err, data) {
-        if (err) {
-            console.log(err);
-            callback([]);
-        }
-        callback(_.pluck(data.DBInstances, 'DBInstanceIdentifier'));
-    });
+  var rds = new AWS.RDS(config.awsCredentials);
+  rds.describeDBInstances({}, function(err, data) {
+    if (err) {
+      console.log(err);
+      callback([]);
+    }
+    var instances = _.pluck(data.DBInstances, 'DBInstanceIdentifier');
+    callback(instances);
+  });
 }
 
 // takes array of RDS db instance names and gets a variety metrics
-function getRDSMetrics(instances) {
-    for (index in instances) {
-        var instance = instances[index];
-        var dimensions = [ { "Name" : 'DBInstanceIdentifier', "Value" : instance} ];
-        printMetric(buildMetricQuery('AWS/RDS', 'CPUUtilization', 'Percent', 'Average', dimensions), start_time, end_time);
-        printMetric(buildMetricQuery('AWS/RDS', 'DatabaseConnections', 'Count', 'Average', dimensions), start_time, end_time);
-    }
+function getRDSMetrics(instances, RDSMetrics) {
+  for (index in instances) {
+    var instance = instances[index];
+    var dimensions = [ { "Name" : 'DBInstanceIdentifier', "Value" : instance} ];
+    Object.keys(RDSMetrics).forEach(function(unit) {
+      RDSMetrics[unit].forEach(function(metric) {
+        printMetric(buildMetricQuery('AWS/RDS', metric[0], unit, metric[1], dimensions), start_time, end_time);
+      });
+    })
+  }
 }
 
 // executes callback with array of hashes of that include ElastiCache CacheClusterId and CacheNodeId
 function getAllElasticCacheNames(callback) {
-    var ec = new AWS.ElastiCache(config.awsCredentials);
-    ec.describeCacheClusters({ ShowCacheNodeInfo: true}, function(err, data) {
-        if (err) {
-            console.log(err);
-            callback([]);
-        }
-        var nodes = _.map(data.CacheClusters, function(value, key) {
-            return [{'Name':'CacheClusterId', 'Value':value.CacheClusterId},
-                    {'Name':'CacheNodeId', 'Value':value.CacheNodes[0].CacheNodeId}];
-        });
-        callback(nodes);
+  var ec = new AWS.ElastiCache(config.awsCredentials);
+  ec.describeCacheClusters({ ShowCacheNodeInfo: true}, function(err, data) {
+    if (err) {
+      console.log(err);
+      callback([]);
+    }
+    var nodes = _.map(data.CacheClusters, function(value, key) {
+    return [{'Name':'CacheClusterId', 'Value':value.CacheClusterId},
+      {'Name':'CacheNodeId', 'Value':value.CacheNodes[0].CacheNodeId}];
     });
+  callback(nodes);
+  });
 }
-
 
 // takes array of hashes of ElastiCache CacheClusterId and CacheNodeId and gets a variety metrics
 function getElasticCacheMetrics(nodes, elasticCacheMetrics) {
-    for (index in nodes) {
-        var node = nodes[index];
-
-        printMetric(buildMetricQuery('AWS/ElastiCache', 'CPUUtilization', 'Percent', 'Average', node), start_time, end_time);
-
-        Object.keys(elasticCacheMetrics).forEach(function(unit) {
-          elasticCacheMetrics[unit].forEach(function(metric) { 
-            printMetric(buildMetricQuery('AWS/ElastiCache', metric, unit, 'Average', node), start_time, end_time);
-          });
-        })
-    }
+  for (index in nodes) {
+    var node = nodes[index];
+    Object.keys(elasticCacheMetrics).forEach(function(unit) {
+      elasticCacheMetrics[unit].forEach(function(metric) {
+        printMetric(buildMetricQuery('AWS/ElastiCache', metric[0], unit, metric[1], node), start_time, end_time);
+      });
+    })
+  }
 }

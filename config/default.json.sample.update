@@ -1,0 +1,87 @@
+{
+  "awsCredentials": {
+    "accessKeyId": "REPLACE",
+    "secretAccessKey": "REPLACE",
+    "region": "us-east-1"
+  },
+  "metricsConfig": {
+    "metrics": [],
+    "carbonNameSpacePrefix": "cloudwatch",
+    "legacyFormat": true
+  },
+  "elasticCacheMetrics": {
+    "Bytes": [
+      ["UnusedMemory","Average"],
+      ["FreeableMemory","Average"],
+      ["NetworkBytesIn","Average"],
+      ["NetworkBytesOut","Average"]
+    ],
+    "Count": [
+      ["CurrConnections","Average"],
+      ["CurrItems","Average"],
+      ["Evictions","Average"],
+      ["Reclaimed","Average"],
+      ["GetHits","Average"],
+      ["CacheHits","Average"],
+      ["GetMisses","Average"],
+      ["CacheMisses","Average"],
+      ["GetTypeCmds","Average"],
+      ["SetTypeCmds","Average"],
+      ["HashBasedCmds","Average"],
+      ["CmdGet","Average"],
+      ["CmdSet","Average"],
+      ["DeleteHits","Average"],
+      ["DeleteMisses","Average"],
+      ["NewItems","Average"],
+      ["NewConnections","Average"]
+    ],
+    "Seconds": [
+      ["ReplicationLag","Average"]
+    ],
+    "Percent": [
+      ["CPUUtilization","Average"]
+    ]
+  },
+  "RDSMetrics": {
+    "Bytes/Second": [
+      ["ReadThroughput","Average"],
+      ["WriteThroughput","Average"],
+      ["NetworkReceiveThroughput","Average"],
+      ["NetworkTransmitThroughput","Average"]
+    ],
+    "Count": [
+      ["ReadLatency","Average"],
+      ["WriteLatency","Average"],
+      ["DiskQueueDepth","Average"],
+      ["DatabaseConnections","Average"]
+    ],
+    "Count/Second": [
+      ["ReadIOPS","Average"],
+      ["WriteIOPS","Average"]
+    ],
+    "Bytes": [
+      ["FreeStorageSpace","Average"],
+      ["FreeableMemory","Average"],
+      ["SwapUsage","Average"]
+    ],
+    "Percent": [
+      ["CPUUtilization","Average"]
+    ]
+  },
+  "ELBMetrics": {
+    "Count": [
+      ["HealthyHostCount","Average"],
+      ["UnHealthyHostCount","Average"],
+      ["HTTPCode_Backend_2XX","Sum"],
+      ["HTTPCode_Backend_3XX","Sum"],
+      ["HTTPCode_Backend_4XX","Sum"],
+      ["HTTPCode_Backend_5XX","Sum"],
+      ["HTTPCode_ELB_4XX","Sum"],
+      ["HTTPCode_ELB_5XX","Sum"]
+    ],
+    "Seconds": [
+      ["Latency","Average"]
+    ]
+  }
+}
+
