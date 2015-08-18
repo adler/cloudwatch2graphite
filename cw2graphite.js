@@ -192,7 +192,7 @@ function getAllElasticCacheNames(callback) {
     return [{'Name':'CacheClusterId', 'Value':value.CacheClusterId},
       {'Name':'CacheNodeId', 'Value':value.CacheNodes[0].CacheNodeId}];
     });
-  callback(nodes);
+    callback(nodes);
   });
 }
 
