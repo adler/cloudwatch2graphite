@@ -50,7 +50,7 @@ getAllELBNames(function(elbs) {
   getELBMetrics(elbs, ELBMetrics);
 });
 getAllElasticCacheNames(function(nodes) {
-  getElasticCacheMetrics(nodes, RDSMetrics);
+  getElasticCacheMetrics(nodes, elasticCacheMetrics);
 });
 getAllRDSInstanceNames(function(instances) {
   getRDSMetrics(instances, RDSMetrics);
