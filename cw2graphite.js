@@ -20,6 +20,9 @@ var useLegacyFormat = config.metricsConfig.legacyFormat;
 var elasticCacheMetrics = config.elasticCacheMetrics
 var RDSMetrics = config.RDSMetrics
 var ELBMetrics = config.ELBMetrics
+var ECSClusterMetrics = config.ECSClusterMetrics
+var ECSServiceMetrics = config.ECSServiceMetrics
+var LambdaMetrics = config.LambdaMetrics
 // pulling all of lodash for _.sortBy(), does it matter? Do we even need to sort?
 var _ = require('lodash');
 
@@ -46,14 +49,38 @@ var start_time = dateFormat(then, "isoUtcDateTime");
 
 var metrics = config.metricsConfig.metrics;
 
+// ELB metrics
 getAllELBNames(function(elbs) {
   getELBMetrics(elbs, ELBMetrics);
 });
+
+// Elasticache metrics
 getAllElasticCacheNames(function(nodes) {
   getElasticCacheMetrics(nodes, elasticCacheMetrics);
 });
+
+// RDS metrics
 getAllRDSInstanceNames(function(instances) {
   getRDSMetrics(instances, RDSMetrics);
+});
+
+// ECS cluster and service metrics - looks nasty
+getAllECSClusterARNs(function (clusterarns) {
+  clusterarns.forEach(function (clusterarn) {
+    getAllECSServiceARNs(clusterarn,function (servicearns) {
+      getAllECSClusterNames(clusterarn,function(clustername) {
+        getAllECSServiceNames(servicearns,clustername,function (services) {
+          getECSClusterMetrics(clustername, ECSClusterMetrics);
+          getECSServiceMetrics(services,clustername,ECSServiceMetrics);
+        })
+      })
+    })
+  })
+})
+
+// Lambda metrics
+getAllLambdaFuncNames(function(functions) {
+  getLambdaMetrics(functions, LambdaMetrics);
 });
 
 for (var index in metrics) {
@@ -207,3 +234,134 @@ function getElasticCacheMetrics(nodes, elasticCacheMetrics) {
     })
   }
 }
+
+// executes a callback with array of ARNs of all ECS clusters
+function getAllECSClusterARNs(callback) {
+  var ecs = new AWS.ECS(config.awsCredentials);
+  var ecsarn = ecs.listClusters({}, function(err, list) {
+    if (err) {console.log(err, err.stack);callback([]);}
+    var arns = list.clusterArns
+    callback(arns);
+  });
+}
+
+
+// executes callback with array of names of all ECS clusters
+function getAllECSClusterNames(ECSARNs,callback) {
+  var ecs = new AWS.ECS(config.awsCredentials);
+  if (ECSARNs.constructor === Array) {
+    var params = {
+      clusters: ECSARNs
+    };
+  } else {
+    var params = {
+      clusters: [ECSARNs]
+    };
+  }
+  ecs.describeClusters(params, function(err, data) {
+    if (err) {
+      console.log(err);
+      callback([]);
+    }
+    var clusters = _.pluck(data.clusters, 'clusterName');
+    callback(clusters);
+  });
+}
+
+
+// takes array of ECS cluster names and gets a variety of metrics
+function getECSClusterMetrics(clusters, ECSClusterMetrics) {
+  for (index in clusters) {
+    var cluster = clusters[index];
+    Object.keys(ECSClusterMetrics).forEach(function(unit) {
+      ECSClusterMetrics[unit].forEach(function(metric) {
+        var dimension = {
+          Name: "ClusterName",Value: cluster
+        }
+        printMetric(buildMetricQuery('AWS/ECS', metric[0], unit, metric[1], [dimension]), start_time, end_time);
+      });
+    })
+  }
+}
+
+function getAllECSServiceARNs(ECSARNs,callback) {
+  var ecs = new AWS.ECS(config.awsCredentials);
+  if (ECSARNs.constructor === Array) {
+    var params = {
+      cluster: ECSARNs.toString()
+    };
+  } else {
+    var params = {
+      cluster: ECSARNs
+    };
+  }
+  var ecsarn = ecs.listServices(params, function(err, list) {
+    if (err) {console.log(err, err.stack);callback([]);}
+    var arns = list.serviceArns
+    callback(arns);
+  });
+}
+
+// executes callback with array of names of all ECS services
+function getAllECSServiceNames(ECSServicesARNs,ECSClusterName,callback) {
+  var ecs = new AWS.ECS(config.awsCredentials);
+  if (ECSServicesARNs.length > 0) {
+    var params = {
+      services : ECSServicesARNs,
+      cluster: ECSClusterName.toString()
+    };
+    ecs.describeServices(params, function(err, data) {
+      if (err) {
+        console.log(err);
+        callback([]);
+      }
+      var services = _.pluck(data.services, 'serviceName');
+      callback(services);
+    });
+  }
+}
+
+// takes array of ECS service names and gets a varity of metrics
+function getECSServiceMetrics(services,clustername,ECSServiceMetrics) {
+  if (services.length > 0) {
+    for (index in services) {
+      var service = services[index];
+      Object.keys(ECSServiceMetrics).forEach(function(unit) {
+        ECSServiceMetrics[unit].forEach(function(metric) {
+          var dimension = [
+            {Name: "ClusterName",Value: clustername.toString()},
+            {Name: "ServiceName",Value: service.toString()}
+          ]
+          printMetric(buildMetricQuery('AWS/ECS', metric[0], unit, metric[1], dimension), start_time, end_time);
+        });
+      })
+    }
+  }
+}
+
+// executes callback with array with all Lambda function names
+function getAllLambdaFuncNames(callback) {
+  var lambda = new AWS.Lambda(config.awsCredentials);
+  var lambdafn = lambda.listFunctions({}, function(err, data) {
+    if (err) {console.log(err, err.stack);callback([]);}
+    var funcnames = _.pluck(data.Functions, 'FunctionName')
+    console.log(funcnames);
+    callback(funcnames);
+  });
+}
+
+// takes array of Lambda function names and gets a variety of metrics
+function getLambdaMetrics(functions, LambdaMetrics) {
+  for (index in functions) {
+    var func = functions[index];
+    Object.keys(LambdaMetrics).forEach(function(unit) {
+      LambdaMetrics[unit].forEach(function(metric) {
+        var dimension = [
+          {Name: "FunctionName",Value: func.toString()}
+        ]
+        printMetric(buildMetricQuery('AWS/Lambda', metric[0], unit, metric[1], dimension), start_time, end_time);
+      });
+    })
+  }
+}
+
