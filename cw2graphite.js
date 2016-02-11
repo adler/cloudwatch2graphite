@@ -345,7 +345,6 @@ function getAllLambdaFuncNames(callback) {
   var lambdafn = lambda.listFunctions({}, function(err, data) {
     if (err) {console.log(err, err.stack);callback([]);}
     var funcnames = _.pluck(data.Functions, 'FunctionName')
-    console.log(funcnames);
     callback(funcnames);
   });
 }
