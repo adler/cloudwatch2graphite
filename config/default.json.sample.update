@@ -82,6 +82,29 @@
     "Seconds": [
       ["Latency","Average"]
     ]
+  },
+  "ECSClusterMetrics" : {
+    "Percent": [
+      ["CPUReservation","Average"],
+      ["MemoryReservation","Average"],
+      ["CPUUtilization","Average"],
+      ["MemoryUtilization","Average"]
+    ]
+  },
+  "ECSServiceMetrics" : {
+    "Percent": [
+      ["CPUUtilization","Average"],
+      ["MemoryUtilization","Average"]
+    ]
+  },
+  "LambdaMetrics" : {
+    "Count": [
+      ["Invocations","Sum"],
+      ["Errors","Sum"],
+      ["Throttles","Sum"]
+    ],
+    "Milliseconds": [
+      ["Duration","Sum"]
+    ]
   }
 }
-
